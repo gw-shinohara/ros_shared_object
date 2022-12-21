@@ -18,7 +18,7 @@ public:
         m_node = std::make_shared<rclcpp::Node>("ros_shared_object_talker_node");
 
         rclcpp::QoS qos(rclcpp::KeepLast(7));
-        m_pub = m_node->create_publisher<std_msgs::msg::String>("topic", qos);
+        m_pub = m_node->create_publisher<std_msgs::msg::String>("chatter", qos);
     }
 
     ~Talker()
