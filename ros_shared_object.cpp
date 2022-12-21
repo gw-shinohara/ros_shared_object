@@ -15,11 +15,13 @@ public:
     {
         rclcpp::init(0, nullptr);
 
-        m_node = std::make_shared<rclcpp::Node>("ros_shared_object_talker_node");
-
+        node_ = std::make_shared<rclcpp::Node>("ros_shared_object_talker_node");
         rclcpp::QoS qos(rclcpp::KeepLast(7));
-        m_pub = m_node->create_publisher<std_msgs::msg::String>("chatter", qos);
+        pub_ = node_->create_publisher<std_msgs::msg::String>("chatter", qos);
     }
+
+    Talker(const Talker&) = delete;
+    Talker& operator = (const Talker&) = delete;
 
     ~Talker()
     {
@@ -28,41 +30,22 @@ public:
 
     void spin_some()
     {
-        rclcpp::spin_some(m_node);
+        rclcpp::spin_some(node_);
     }
 
-    // publish message
     void talk(const int &count)
     {
-        m_msg = std::make_unique<std_msgs::msg::String>();
-        m_msg->data = "Hello from shared object: " + std::to_string(count);
-        RCLCPP_INFO(m_node->get_logger(), "Publishing: '%s'", m_msg->data.c_str());
-
-        m_pub->publish(std::move(m_msg));
+        msg_ = std::make_unique<std_msgs::msg::String>();
+        msg_->data = "Hello from shared object: " + std::to_string(count);
+        RCLCPP_INFO(node_->get_logger(), "Publishing: '%s'", msg_->data.c_str());
+        pub_->publish(std::move(msg_));
     }
 
-protected:
-    static void _bind_methods();
-
-    // replace rclcpp::Node with your custom node
-    std::shared_ptr<rclcpp::Node> m_node;
-
-    // publisher
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr m_pub;
-
-    // message to publish
-    std::unique_ptr<std_msgs::msg::String> m_msg;
+private:
+    std::shared_ptr<rclcpp::Node> node_;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
+    std::unique_ptr<std_msgs::msg::String> msg_;
 };
-
-namespace
-{
-    const char *AllocString(const char *str)
-    {
-        char *buf = static_cast<char *>(malloc(strlen(str) + 1));
-        strcpy(buf, str);
-        return buf;
-    }
-}
 
 extern "C"
 {
