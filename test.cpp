@@ -1,47 +1,41 @@
 #include <dlfcn.h>
-// #include <cstdint>
 #include <iostream>
-#include <chrono>
-#include <thread>
-#include <csignal>
 
-using namespace std;
+typedef RosSharedObjectLibrary* (*create_node_t)();
+typedef void (*destroy_node_t)(RosSharedObjectLibrary*);
 
-namespace
-{
-    const string SO_FILE_PATH = "./libros_shared_object.so";
-    volatile sig_atomic_t flag = 1;
-
-    void handler(int signum)
-    {
-        flag = 0;
-    }
-}
-
-int main(int argc, char* argv[])
-{
-    signal(SIGINT, handler);
-
-    void* handle = dlopen(SO_FILE_PATH.c_str(), RTLD_NOW);
-    cout << "dlopen: " << &handle << endl;
-
-    intptr_t (*create)() = (intptr_t (*)())dlsym(handle, "create");
-    void (*spin_some)(intptr_t) = (void (*)(intptr_t))dlsym(handle, "spin_some");
-    void (*talk)(intptr_t, int) = (void (*)(intptr_t, int))dlsym(handle, "talk");
-    void (*destroy)(intptr_t) = (void (*)(intptr_t))dlsym(handle, "destroy");
-
-    intptr_t instance = (*create)();
-
-    while (flag != 0)
-    {
-        (*talk)(instance, 0);
-        (*spin_some)(instance);
-        this_thread::sleep_for(chrono::seconds(1));
+int main() {
+    // 共有ライブラリをロード
+    void* handle = dlopen("libros_shared_object_library.so", RTLD_LAZY);
+    if (!handle) {
+        std::cerr << "Failed to load library: " << dlerror() << std::endl;
+        return 1;
     }
 
-    (*destroy)(instance);
+    // ノードを作成する関数と削除する関数を取得
+    create_node_t create_node = (create_node_t)dlsym(handle, "create_node");
+    destroy_node_t destroy_node = (destroy_node_t)dlsym(handle, "destroy_node");
+    if (!create_node || !destroy_node) {
+        std::cerr << "Failed to load symbols: " << dlerror() << std::endl;
+        dlclose(handle);
+        return 1;
+    }
+
+    // ノードを作成
+    RosSharedObjectLibrary* node = create_node();
+    
+    // メッセージをパブリッシュ
+    node->publish_message("Hello, ROS2 from shared object!");
+
+    // ノードを開始
+    node->start();
+
+    // ノードを停止
+    node->stop();
+
+    // ノードを削除
+    destroy_node(node);
 
     dlclose(handle);
-
     return 0;
 }
