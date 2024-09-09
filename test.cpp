@@ -1,41 +1,68 @@
-#include <dlfcn.h>
 #include <iostream>
+#include <dlfcn.h>
+#include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/string.hpp"
 
-typedef RosSharedObjectLibrary* (*create_node_t)();
-typedef void (*destroy_node_t)(RosSharedObjectLibrary*);
+// Forward declarations of the external C functions from the shared object library
+typedef RosSharedObjectLibrary* (*CreateNodeFunc)();
+typedef void (*DestroyNodeFunc)(RosSharedObjectLibrary*);
 
-int main() {
-    // 共有ライブラリをロード
-    void* handle = dlopen("libros_shared_object_library.so", RTLD_LAZY);
+int main(int argc, char** argv) {
+    // Initialize the ROS2 system
+    rclcpp::init(argc, argv);
+
+    // Load the shared library
+    void* handle = dlopen("./libros_shared_object_library.so", RTLD_LAZY);
     if (!handle) {
-        std::cerr << "Failed to load library: " << dlerror() << std::endl;
+        std::cerr << "Cannot load library: " << dlerror() << std::endl;
         return 1;
     }
 
-    // ノードを作成する関数と削除する関数を取得
-    create_node_t create_node = (create_node_t)dlsym(handle, "create_node");
-    destroy_node_t destroy_node = (destroy_node_t)dlsym(handle, "destroy_node");
-    if (!create_node || !destroy_node) {
-        std::cerr << "Failed to load symbols: " << dlerror() << std::endl;
+    // Reset errors
+    dlerror();
+
+    // Load the symbol for create_node
+    CreateNodeFunc create_node = (CreateNodeFunc)dlsym(handle, "create_node");
+    const char* dlsym_error = dlerror();
+    if (dlsym_error) {
+        std::cerr << "Cannot load symbol create_node: " << dlsym_error << std::endl;
         dlclose(handle);
         return 1;
     }
 
-    // ノードを作成
+    // Create the node
     RosSharedObjectLibrary* node = create_node();
-    
-    // メッセージをパブリッシュ
+    if (!node) {
+        std::cerr << "Failed to create the node" << std::endl;
+        dlclose(handle);
+        return 1;
+    }
+
+    // Test the publish_message function
     node->publish_message("Hello, ROS2 from shared object!");
 
-    // ノードを開始
+    // Test the start function (allow some time to process)
     node->start();
 
-    // ノードを停止
-    node->stop();
+    // Wait for a few seconds to ensure messages are published
+    rclcpp::sleep_for(std::chrono::seconds(2));
 
-    // ノードを削除
+    // Load the symbol for destroy_node
+    DestroyNodeFunc destroy_node = (DestroyNodeFunc)dlsym(handle, "destroy_node");
+    dlsym_error = dlerror();
+    if (dlsym_error) {
+        std::cerr << "Cannot load symbol destroy_node: " << dlsym_error << std::endl;
+        dlclose(handle);
+        return 1;
+    }
+
+    // Destroy the node
     destroy_node(node);
 
+    // Close the library
     dlclose(handle);
+
+    // Shutdown ROS2
+    rclcpp::shutdown();
     return 0;
 }
