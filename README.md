@@ -9,7 +9,7 @@ ROS2: Rolling Ridley (Can be changed to other versions)
 
 ## Build
 ```
-mkdir build && build
+mkdir build && cd build
 cmake ..
 make
 ```
