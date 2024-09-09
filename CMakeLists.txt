@@ -15,6 +15,6 @@ install(TARGETS ros_shared_object_library
   RUNTIME DESTINATION bin
 )
 
-add_executable(test test.cpp)
+add_executable(ros2_share_test test.cpp)
 
 ament_package()
