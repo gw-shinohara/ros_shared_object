@@ -1,7 +1,5 @@
 #include <iostream>
 #include <dlfcn.h>
-#include "rclcpp/rclcpp.hpp"
-#include "std_msgs/msg/string.hpp"
 
 // Forward declarations of the external C functions from the shared object library
 typedef RosSharedObjectLibrary* (*CreateNodeFunc)();
