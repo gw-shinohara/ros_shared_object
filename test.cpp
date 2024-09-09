@@ -11,7 +11,7 @@ using namespace cv;  // For OpenCV functions
 
 namespace
 {
-    const string SO_FILE_PATH = "/home/ros_ws/src/ros2-detection-python/ros_shared_object/build/libros_shared_object_library.so";
+    const string SO_FILE_PATH = "/home/ros_shared_object/build/libros_shared_object_library.so";
     volatile sig_atomic_t flag = 1;
 
     void handler(int signum)
