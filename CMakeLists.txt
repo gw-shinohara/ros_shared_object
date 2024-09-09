@@ -16,5 +16,7 @@ install(TARGETS ros_shared_object_library
 )
 
 add_executable(ros2_share_test test.cpp)
+# Link libdl
+target_link_libraries(ros2_share_test dl)
 
 ament_package()

@@ -1,66 +1,69 @@
-#include <iostream>
 #include <dlfcn.h>
+#include <cstdint>
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include <csignal>
 
-// Forward declarations of the external C functions from the shared object library
-typedef RosSharedObjectLibrary* (*CreateNodeFunc)();
-typedef void (*DestroyNodeFunc)(RosSharedObjectLibrary*);
+using namespace std;
 
-int main(int argc, char** argv) {
-    // Initialize the ROS2 system
-    rclcpp::init(argc, argv);
+namespace
+{
+    const string SO_FILE_PATH = "/home/ros_shared_object/build/libros_shared_object_library.so";
+    volatile sig_atomic_t flag = 1;
 
-    // Load the shared library
-    void* handle = dlopen("./libros_shared_object_library.so", RTLD_LAZY);
+    void handler(int signum)
+    {
+        flag = 0;
+    }
+}
+
+int main(int argc, char* argv[])
+{
+    signal(SIGINT, handler);
+
+    void* handle = dlopen(SO_FILE_PATH.c_str(), RTLD_NOW);
     if (!handle) {
-        std::cerr << "Cannot load library: " << dlerror() << std::endl;
+        cerr << "Error loading shared object: " << dlerror() << endl;
         return 1;
     }
 
-    // Reset errors
-    dlerror();
-
-    // Load the symbol for create_node
-    CreateNodeFunc create_node = (CreateNodeFunc)dlsym(handle, "create_node");
-    const char* dlsym_error = dlerror();
-    if (dlsym_error) {
-        std::cerr << "Cannot load symbol create_node: " << dlsym_error << std::endl;
-        dlclose(handle);
+    intptr_t (*create)() = (intptr_t (*)())dlsym(handle, "create");
+    if (!create) {
+        cerr << "Error loading symbol create: " << dlerror() << endl;
         return 1;
     }
 
-    // Create the node
-    RosSharedObjectLibrary* node = create_node();
-    if (!node) {
-        std::cerr << "Failed to create the node" << std::endl;
-        dlclose(handle);
+    void (*spin_some)(intptr_t) = (void (*)(intptr_t))dlsym(handle, "spin_some");
+    if (!spin_some) {
+        cerr << "Error loading symbol spin_some: " << dlerror() << endl;
         return 1;
     }
 
-    // Test the publish_message function
-    node->publish_message("Hello, ROS2 from shared object!");
-
-    // Test the start function (allow some time to process)
-    node->start();
-
-    // Wait for a few seconds to ensure messages are published
-    rclcpp::sleep_for(std::chrono::seconds(2));
-
-    // Load the symbol for destroy_node
-    DestroyNodeFunc destroy_node = (DestroyNodeFunc)dlsym(handle, "destroy_node");
-    dlsym_error = dlerror();
-    if (dlsym_error) {
-        std::cerr << "Cannot load symbol destroy_node: " << dlsym_error << std::endl;
-        dlclose(handle);
+    void (*talk)(intptr_t, int) = (void (*)(intptr_t, int))dlsym(handle, "talk");
+    if (!talk) {
+        cerr << "Error loading symbol talk: " << dlerror() << endl;
         return 1;
     }
 
-    // Destroy the node
-    destroy_node(node);
+    
+    void (*destroy)(intptr_t) = (void (*)(intptr_t))dlsym(handle, "destroy");
+    if (!destroy) {
+        cerr << "Error loading symbol destroy: " << dlerror() << endl;
+        return 1;
+    }
+    intptr_t instance = (*create)();
 
-    // Close the library
+    while (flag != 0)
+    {
+        (*talk)(instance, 0);
+        (*spin_some)(instance);
+        this_thread::sleep_for(chrono::seconds(1));
+    }
+
+    (*destroy)(instance);
+
     dlclose(handle);
 
-    // Shutdown ROS2
-    rclcpp::shutdown();
     return 0;
 }
