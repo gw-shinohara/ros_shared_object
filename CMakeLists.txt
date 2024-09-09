@@ -5,7 +5,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 
-add_library(ros_shared_object_library SHARED src/ros_shared_object_library.cpp)
+add_library(ros_shared_object_library SHARED src/ros_shared_object.cpp)
 
 ament_target_dependencies(ros_shared_object_library rclcpp std_msgs)
 
