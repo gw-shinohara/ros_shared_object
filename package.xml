@@ -3,7 +3,7 @@
   <name>ros_shared_object_library</name>
   <version>0.0.1</version>
   <description>ROS2 shared object library example</description>
-  <maintainer email="your_email@example.com">Your Name</maintainer>
+  <maintainer email="shinohara@globalwalkers.co.jp">gw-shinohara</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
