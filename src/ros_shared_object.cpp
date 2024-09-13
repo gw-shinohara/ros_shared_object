@@ -16,7 +16,7 @@ public:
         rclcpp::init(0, nullptr);
 
         node_ = std::make_shared<rclcpp::Node>("ros_shared_object_talker_node");
-        rclcpp::QoS qos(rclcpp::KeepLast(2), rmw_qos_profile_sensor_data);
+        rclcpp::QoS qos(rclcpp::KeepLast(7));
 
         pub_ = node_->create_publisher<sensor_msgs::msg::Image>("image_raw", qos);
     }
